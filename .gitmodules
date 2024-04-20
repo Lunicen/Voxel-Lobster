@@ -1,0 +1,6 @@
+[submodule "vendor/glText"]
+	path = vendor/glText
+	url = https://github.com/RooTender/glText
+[submodule "vendor/stb"]
+	path = vendor/stb
+	url = https://github.com/nothings/stb

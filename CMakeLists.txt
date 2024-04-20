@@ -1,10 +1,10 @@
 ﻿cmake_minimum_required (VERSION 3.15)
 
 # Enable Hot Reload for MSVC compilers if supported.
-if (POLICY CMP0141)
-  cmake_policy(SET CMP0141 NEW)
-  set(CMAKE_MSVC_DEBUG_INFORMATION_FORMAT "$<IF:$<AND:$<C_COMPILER_ID:MSVC>,$<CXX_COMPILER_ID:MSVC>>,$<$<CONFIG:Debug,RelWithDebInfo>:EditAndContinue>,$<$<CONFIG:Debug,RelWithDebInfo>:ProgramDatabase>>")
-endif()
+#if (POLICY CMP0141)
+#  cmake_policy(SET CMP0141 NEW)
+#  set(CMAKE_MSVC_DEBUG_INFORMATION_FORMAT "$<IF:$<AND:$<C_COMPILER_ID:MSVC>,$<CXX_COMPILER_ID:MSVC>>,$<$<CONFIG:Debug,RelWithDebInfo>:EditAndContinue>,$<$<CONFIG:Debug,RelWithDebInfo>:ProgramDatabase>>")
+#endif()
 
 project (BlockForge)
 
@@ -36,42 +36,11 @@ endif()
 # Add the common source files
 file(GLOB_RECURSE SOURCE_FILES "${CMAKE_SOURCE_DIR}/src/*.cpp")
 
-# Add the GLAD source file conditionally based on the system
-list(APPEND SOURCE_FILES "${CMAKE_SOURCE_DIR}/lib/glad/build/${ARCHITECTURE}/${CMAKE_BUILD_TYPE}/glad.c")
-
-# Add the ImGUI header files
-list(APPEND SOURCE_FILES
-    "${CMAKE_SOURCE_DIR}/lib/imgui/backends/imgui_impl_glfw.h"
-    "${CMAKE_SOURCE_DIR}/lib/imgui/backends/imgui_impl_opengl3.h"
-    "${CMAKE_SOURCE_DIR}/lib/imgui/backends/imgui_impl_opengl3_loader.h"
-    "${CMAKE_SOURCE_DIR}/lib/imgui/imconfig.h"
-    "${CMAKE_SOURCE_DIR}/lib/imgui/imgui.h"
-    "${CMAKE_SOURCE_DIR}/lib/imgui/imgui_internal.h"
-    "${CMAKE_SOURCE_DIR}/lib/imgui/imstb_rectpack.h"
-    "${CMAKE_SOURCE_DIR}/lib/imgui/imstb_textedit.h"
-    "${CMAKE_SOURCE_DIR}/lib/imgui/imstb_truetype.h"
-)
-
-# Add the ImGUI source files
-list(APPEND SOURCE_FILES
-    "${CMAKE_SOURCE_DIR}/lib/imgui/backends/imgui_impl_glfw.cpp"
-    "${CMAKE_SOURCE_DIR}/lib/imgui/backends/imgui_impl_opengl3.cpp"
-    "${CMAKE_SOURCE_DIR}/lib/imgui/imgui.cpp"
-    "${CMAKE_SOURCE_DIR}/lib/imgui/imgui_demo.cpp"
-    "${CMAKE_SOURCE_DIR}/lib/imgui/imgui_draw.cpp"
-    "${CMAKE_SOURCE_DIR}/lib/imgui/imgui_tables.cpp"
-    "${CMAKE_SOURCE_DIR}/lib/imgui/imgui_widgets.cpp"
-)
-
-add_executable (BlockForge ${SOURCE_FILES})
+add_executable(BlockForge ${SOURCE_FILES})
 include_directories(BlockForge 
     PRIVATE 
     "${CMAKE_SOURCE_DIR}/include"
 )
-
-if (CMAKE_VERSION VERSION_GREATER 3.12)
-  set_property(TARGET BlockForge PROPERTY CXX_STANDARD 20)
-endif()
 
 # Files to copy
 set(to_copy
@@ -90,66 +59,78 @@ foreach(file ${to_copy})
     file(COPY ${copy_src} DESTINATION ${CMAKE_BINARY_DIR})
 endforeach()
 
-option(DEBUG_MODE "Compile code in debug mode?" OFF)
+set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 20)
 
 # OpenGL
 find_package(OpenGL REQUIRED)
 target_link_libraries(OpenGL::GL)
 
-# GLAD
-find_library(glad_path NAMES glad PATHS "${CMAKE_SOURCE_DIR}/lib/glad/build/${ARCHITECTURE}/${CMAKE_BUILD_TYPE}")
-target_link_libraries(${PROJECT_NAME} ${glad_path})
-include_directories(PRIVATE "${CMAKE_SOURCE_DIR}/lib/glad/build/${ARCHITECTURE}/${CMAKE_BUILD_TYPE}/include")
-message("Added ${glad_path}")
+# Libraries
+include(FetchContent)
 
-# GLFW
-find_library(glfw_path NAMES glfw3 PATHS "${CMAKE_SOURCE_DIR}/lib/glfw/build/${ARCHITECTURE}/${CMAKE_BUILD_TYPE}")
-target_link_libraries(${PROJECT_NAME} ${glfw_path})
-include_directories(PRIVATE "${CMAKE_SOURCE_DIR}/lib/glfw/include")
-if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
-  add_compile_options("-lglfw -framework OpenGL -framework Cocoa -framework IOKit -framework CoreVideo -framework CoreFoundation")
-endif()
-message("Added ${glfw_path}")
 
-# FastNoise2
-if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-  find_library(fastnoise2_path NAMES "FastNoiseD" PATHS "${CMAKE_SOURCE_DIR}/lib/FastNoise2/build/${ARCHITECTURE}/${CMAKE_BUILD_TYPE}")
-else()
-  find_library(fastnoise2_path NAMES "FastNoise" PATHS "${CMAKE_SOURCE_DIR}/lib/FastNoise2/build/${ARCHITECTURE}/${CMAKE_BUILD_TYPE}")
-endif()
-target_link_libraries(${PROJECT_NAME} ${fastnoise2_path})
-include_directories(PRIVATE "${CMAKE_SOURCE_DIR}/lib/FastNoise2/include")
-message("Added ${fastnoise2_path}")
+FetchContent_Declare (
+  fastnoise2
+  GIT_REPOSITORY https://github.com/Auburn/FastNoise2.git
+  GIT_TAG        v0.10.0-alpha
+)
 
-if (MSVC)
-  set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>DLL:Debug>")
-  add_compile_definitions("/MP")
-  if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-    add_compile_definitions(_ITERATOR_DEBUG_LEVEL=2)
-    add_compile_definitions(_DEBUG=1)
-  endif()
-endif()
+FetchContent_Declare (
+  glfw
+  GIT_REPOSITORY https://github.com/glfw/glfw.git
+  GIT_TAG        3.4
+)
 
-# imgui
-include_directories(PRIVATE "${CMAKE_SOURCE_DIR}/lib/imgui")
+FetchContent_Declare (
+  glm
+  GIT_REPOSITORY https://github.com/g-truc/glm.git
+  GIT_TAG        1.0.1
+)
 
-# JSON
-include_directories(PRIVATE "${CMAKE_SOURCE_DIR}/lib/json/include")
+FetchContent_Declare (
+  imgui
+  GIT_REPOSITORY https://github.com/ocornut/imgui.git
+  GIT_TAG        v1.90.5
+)
 
-# GLM
-include_directories(PRIVATE "${CMAKE_SOURCE_DIR}/lib/glm")
+FetchContent_Declare (
+  json
+  GIT_REPOSITORY https://github.com/nlohmann/json.git
+  GIT_TAG        v3.11.3
+)
 
-# glText
-include_directories(PRIVATE "${CMAKE_SOURCE_DIR}/lib/glText")
+FetchContent_Declare (
+  robin_hood_hashing
+  GIT_REPOSITORY https://github.com/martinus/robin-hood-hashing.git
+  GIT_TAG        3.11.5
+)
 
-# Robin Hood Hashing
-include_directories(PRIVATE "${CMAKE_SOURCE_DIR}/lib/robin-hood-hashing/src/include")
+FetchContent_Declare (
+  spdlog
+  GIT_REPOSITORY https://github.com/gabime/spdlog.git
+  GIT_TAG        v1.13.0
+)
 
-# spdlog
-include_directories(PRIVATE "${CMAKE_SOURCE_DIR}/lib/spdlog/include")
+FetchContent_Declare (
+  spscqueue
+  GIT_REPOSITORY https://github.com/rigtorp/SPSCQueue.git
+  GIT_TAG        v1.1
+)
 
-# SPSC Queue
-include_directories(PRIVATE "${CMAKE_SOURCE_DIR}/lib/SPSCQueue/include")
+FetchContent_MakeAvailable(fastnoise2 glfw glm imgui json robin_hood_hashing spdlog spscqueue)
+target_link_libraries(${PROJECT_NAME} PRIVATE fastnoise2 glfw glm imgui json robin-hood-hashing spdlog spscqueue)
 
-# stb
-include_directories(PRIVATE "${CMAKE_SOURCE_DIR}/lib/stb")
+# Repositories without tag
+include_directories(PRIVATE 
+    "${CMAKE_SOURCE_DIR}/vendor/glText"
+    "${CMAKE_SOURCE_DIR}/vendor/stb"
+)
+
+# Directories
+include_directories("${glfw_SOURCE_DIR}/include")
+include_directories("${glm_SOURCE_DIR}/glm")
+include_directories("${robin_hood_hashing_SOURCE_DIR}/src/include")
+include_directories("${json_SOURCE_DIR}/include")
+include_directories("${fastnoise2_SOURCE_DIR}/include")
+include_directories("${imgui_SOURCE_DIR}")
+include_directories("${spscqueue_SOURCE_DIR}/include")

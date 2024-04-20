@@ -1,5 +1,7 @@
 #include "application/layer/sandbox/model/surface/texture_atlas.h"
 
+#include <array>
+
 std::array<Point, VerticesInQuad> TextureAtlas::GetTextureCoordinatesAt(const unsigned x, const unsigned y)
 {
 	const auto& width = GetWidth();
